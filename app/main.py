@@ -25,12 +25,17 @@ def main():
     # Apply consistent styling
     apply_styling()
     
+    # Initialize session state for navigation if it doesn't exist
+    if "navigation" not in st.session_state:
+        st.session_state.navigation = "🏠 Dashboard"
+    
     # Application title
     st.title("Student Grades Tracker")
     
     # Sidebar navigation with icons
     st.sidebar.title("Navigation")
     
+    # Use session state for menu selection to maintain state across reruns
     menu = st.sidebar.radio(
         "Select a Section:",
         [
@@ -40,8 +45,17 @@ def main():
             "📝 Grades Management",
             "📊 Analytics & Reporting",
             "⚙️ Database Setup"
-        ]
+        ],
+        index=0 if st.session_state.navigation == "🏠 Dashboard" else
+              1 if st.session_state.navigation == "👨‍🎓 Student Management" else
+              2 if st.session_state.navigation == "📚 Course Management" else
+              3 if st.session_state.navigation == "📝 Grades Management" else
+              4 if st.session_state.navigation == "📊 Analytics & Reporting" else
+              5
     )
+    
+    # Update navigation state based on sidebar selection
+    st.session_state.navigation = menu
     
     # Route to the appropriate UI component based on menu selection
     if menu == "🏠 Dashboard":
@@ -85,7 +99,9 @@ def render_dashboard():
         - Update student information
         - Delete students
         """)
-        st.button("Go to Student Management", on_click=lambda: st.session_state.update({"navigation": "Student Management"}))
+        if st.button("Go to Student Management"):
+            st.session_state.navigation = "👨‍🎓 Student Management"
+            st.experimental_rerun()
     
     with col2:
         st.markdown("""
@@ -94,7 +110,9 @@ def render_dashboard():
         - Update course details
         - Delete courses
         """)
-        st.button("Go to Course Management", on_click=lambda: st.session_state.update({"navigation": "Course Management"}))
+        if st.button("Go to Course Management"):
+            st.session_state.navigation = "📚 Course Management"
+            st.experimental_rerun()
     
     with col3:
         st.markdown("""
@@ -103,7 +121,9 @@ def render_dashboard():
         - Update existing grades
         - Delete grades
         """)
-        st.button("Go to Grade Management", on_click=lambda: st.session_state.update({"navigation": "Grade Management"}))
+        if st.button("Go to Grade Management"):
+            st.session_state.navigation = "📝 Grades Management"
+            st.experimental_rerun()
     
     # Analytics preview
     st.markdown("---")
@@ -115,7 +135,9 @@ def render_dashboard():
     - Course analytics
     - At-risk student identification
     """)
-    st.button("Go to Analytics", on_click=lambda: st.session_state.update({"navigation": "Analytics & Reporting"}))
+    if st.button("Go to Analytics"):
+        st.session_state.navigation = "📊 Analytics & Reporting"
+        st.experimental_rerun()
     
     # Getting started guide
     st.markdown("---")
@@ -129,6 +151,9 @@ def render_dashboard():
         4. Use **Grades Management** to assign grades to students.
         5. Finally, view **Analytics & Reporting** to see insights about student performance.
         """)
+        if st.button("Go to Database Setup"):
+            st.session_state.navigation = "⚙️ Database Setup"
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main() 
