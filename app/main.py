@@ -14,16 +14,16 @@ from app.ui.db_ui import render_db_setup
 
 def main():
     """Main application entry point"""
-    # Apply consistent styling
-    apply_styling()
-    
-    # Set page config
+    # Set page config - MUST be first Streamlit command
     st.set_page_config(
         page_title="Student Grades Tracker",
         page_icon="📚",
         layout="wide",
         initial_sidebar_state="expanded"
     )
+    
+    # Apply consistent styling
+    apply_styling()
     
     # Application title
     st.title("Student Grades Tracker")

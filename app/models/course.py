@@ -34,7 +34,8 @@ class Course:
                     courses.append(cls.from_db_row(row))
             return courses
         except Exception as e:
-            raise Exception(f"Error fetching courses: {e}")
+            print(f"Error fetching courses: {e}")
+            return []
     
     @classmethod
     def get_by_id(cls, course_id: int) -> Optional['Course']:

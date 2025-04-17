@@ -33,7 +33,8 @@ class Student:
                     students.append(cls.from_db_row(row))
             return students
         except Exception as e:
-            raise Exception(f"Error fetching students: {e}")
+            print(f"Error fetching students: {e}")
+            return []
     
     @classmethod
     def get_by_id(cls, student_id: str) -> Optional['Student']:

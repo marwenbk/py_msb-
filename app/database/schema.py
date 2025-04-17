@@ -92,17 +92,21 @@ def seed_data():
         ]
         
         # Insert students
+        students_added = 0
         with db.get_cursor() as cursor:
             for name, email in students:
-                enroll_code = random.choice(enrollment_codes)
-                student_id = generate_student_id(enroll_code)
-                standardized_email = standardize_email(email)
-                
-                cursor.execute("""
-                    INSERT INTO students (student_id, name, email)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT DO NOTHING;
-                """, (student_id, name, standardized_email))
+                try:
+                    enroll_code = random.choice(enrollment_codes)
+                    student_id = generate_student_id(enroll_code)
+                    standardized_email = standardize_email(email)
+                    
+                    cursor.execute("""
+                        INSERT INTO students (student_id, name, email)
+                        VALUES (%s, %s, %s);
+                    """, (student_id, name, standardized_email))
+                    students_added += 1
+                except Exception as e:
+                    print(f"Could not add student {name}: {e}")
         
         # Sample course data
         courses = [
@@ -114,35 +118,52 @@ def seed_data():
         ]
         
         # Insert courses
+        courses_added = 0
         with db.get_cursor() as cursor:
             for cname, code, credits in courses:
-                cursor.execute("""
-                    INSERT INTO courses (name, code, credits)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT DO NOTHING;
-                """, (cname, code, credits))
+                try:
+                    cursor.execute("""
+                        INSERT INTO courses (name, code, credits)
+                        VALUES (%s, %s, %s);
+                    """, (cname, code, credits))
+                    courses_added += 1
+                except Exception as e:
+                    print(f"Could not add course {cname}: {e}")
         
         # Get all students and courses for grade assignment
-        with db.get_cursor() as cursor:
-            cursor.execute("SELECT student_id FROM students ORDER BY student_id")
-            student_ids = [row[0] for row in cursor.fetchall()]
-            
-            cursor.execute("SELECT id FROM courses ORDER BY id")
-            course_ids = [row[0] for row in cursor.fetchall()]
+        student_ids = []
+        course_ids = []
+        try:
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT student_id FROM students ORDER BY student_id")
+                student_ids = [row[0] for row in cursor.fetchall()]
+                
+                cursor.execute("SELECT id FROM courses ORDER BY id")
+                course_ids = [row[0] for row in cursor.fetchall()]
+        except Exception as e:
+            return False, f"Error retrieving students and courses: {e}"
+        
+        # Skip grade assignment if no students or courses
+        if not student_ids or not course_ids:
+            return False, "Cannot assign grades: No students or courses found"
         
         # Insert grades for each student in each course
+        grades_added = 0
         with db.get_cursor() as cursor:
             for sid in student_ids:
                 for cid in course_ids:
-                    # 20% chance for a failing grade (<50); otherwise, a grade between 50 and 100
-                    grade = random.randint(30, 49) if random.random() < 0.2 else random.randint(50, 100)
-                    
-                    cursor.execute("""
-                        INSERT INTO grades (student_id, course_id, grade)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (student_id, course_id) DO NOTHING;
-                    """, (sid, cid, grade))
+                    try:
+                        # 20% chance for a failing grade (<50); otherwise, a grade between 50 and 100
+                        grade = random.randint(30, 49) if random.random() < 0.2 else random.randint(50, 100)
+                        
+                        cursor.execute("""
+                            INSERT INTO grades (student_id, course_id, grade)
+                            VALUES (%s, %s, %s);
+                        """, (sid, cid, grade))
+                        grades_added += 1
+                    except Exception as e:
+                        print(f"Could not add grade for student {sid}, course {cid}: {e}")
         
-        return True, "Sample data seeded successfully."
+        return True, f"Sample data seeded successfully: {students_added} students, {courses_added} courses, {grades_added} grades."
     except Exception as e:
         return False, f"Error seeding data: {e}" 

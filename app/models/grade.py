@@ -56,7 +56,8 @@ class Grade:
                     grades.append(grade)
             return grades
         except Exception as e:
-            raise Exception(f"Error fetching grades: {e}")
+            print(f"Error fetching grades: {e}")
+            return []
     
     @classmethod
     def get_by_id(cls, grade_id: int) -> Optional['Grade']:

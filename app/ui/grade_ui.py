@@ -207,7 +207,7 @@ def render_grade_management():
             ]
         
         # Show current grade if exists
-        if not existing_grade.empty:
+        if existing_grade is not None and not existing_grade.empty:
             st.info(f"Current grade: {existing_grade.iloc[0]['raw_grade']} ({existing_grade.iloc[0]['letter']})")
             
         # Grade slider
