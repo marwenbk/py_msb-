@@ -169,59 +169,187 @@ def dashboard_analytics():
         students_gpa_df, course_analytics = GradeService.get_analytics_data()
         
         if students_gpa_df.empty:
-            st.info("No student data available for analytics yet. Set up the database and add data to see analytics here.")
+            # Display a better-styled info message with guidance
+            st.markdown("""
+            <div style="padding: 20px; background-color: #f8f9fa; border-radius: 10px; border-left: 4px solid #4CAF50; margin-bottom: 20px;">
+                <h3 style="color: #4CAF50; margin-top: 0;">📊 Analytics Dashboard</h3>
+                <p>No student data available yet. Follow these steps to see analytics:</p>
+                <ol>
+                    <li>Go to <b>Database Setup</b> and create tables with sample data</li>
+                    <li>Or add your own students, courses, and grades manually</li>
+                </ol>
+            </div>
+            """, unsafe_allow_html=True)
             return
             
-        st.markdown("## 📊 Academic Overview")
+        # Create a visually appealing header with gradient background
+        st.markdown("""
+        <div style="padding: 15px; border-radius: 10px; 
+            background: linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%); 
+            color: white; margin-bottom: 20px;">
+            <h2 style="margin:0; text-align:center;">📊 Academic Performance Dashboard</h2>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Summary metrics in a clean row
+        # Summary metrics with improved styling and color indicators
         col1, col2, col3, col4 = st.columns(4)
+        
+        # Calculate values for metrics
+        avg_gpa = students_gpa_df['gpa'].mean()
+        total_students = len(students_gpa_df)
+        passing_students = len(students_gpa_df[students_gpa_df['gpa'] >= 2.0])
+        pass_rate = passing_students / total_students * 100 if total_students > 0 else 0
+        honor_students = len(students_gpa_df[students_gpa_df['gpa'] >= 3.5])
+        honor_rate = honor_students / total_students * 100 if total_students > 0 else 0
+        failing_students = len(students_gpa_df[students_gpa_df['gpa'] < 2.0])
+        failing_rate = failing_students / total_students * 100 if total_students > 0 else 0
+        
+        # Add deltas to show context
         with col1:
-            avg_gpa = students_gpa_df['gpa'].mean()
-            st.metric("Average GPA", f"{avg_gpa:.2f}")
+            st.metric("Average GPA", f"{avg_gpa:.2f}", 
+                      delta="out of 4.0" if avg_gpa <= 4 else None,
+                      delta_color="off")
         with col2:
-            passing_students = len(students_gpa_df[students_gpa_df['gpa'] >= 2.0])
-            total_students = len(students_gpa_df)
-            pass_rate = passing_students / total_students * 100 if total_students > 0 else 0
-            st.metric("Pass Rate", f"{pass_rate:.1f}%")
+            st.metric("Pass Rate", f"{pass_rate:.1f}%", 
+                      delta=f"{passing_students} students" if passing_students > 0 else None,
+                      delta_color="off")
         with col3:
-            honor_students = len(students_gpa_df[students_gpa_df['gpa'] >= 3.5])
-            honor_rate = honor_students / total_students * 100 if total_students > 0 else 0
-            st.metric("Honor Students", f"{honor_rate:.1f}%")
+            st.metric("Honor Students", f"{honor_rate:.1f}%", 
+                      delta=f"{honor_students} students" if honor_students > 0 else None,
+                      delta_color="off")
         with col4:
-            failing_students = len(students_gpa_df[students_gpa_df['gpa'] < 2.0])
-            st.metric("Students at Risk", f"{failing_students}")
+            st.metric("Students at Risk", f"{failing_students}", 
+                      delta=f"{failing_rate:.1f}% of total" if failing_students > 0 else "None",
+                      delta_color="inverse")
         
-        # Show a single consolidated visualization instead of multiple
-        st.markdown("### Academic Standing")
+        # Add a horizontal divider
+        st.markdown("<hr style='margin: 15px 0; opacity: 0.3;'>", unsafe_allow_html=True)
         
-        # Create a figure with a single pie chart to save space
-        fig, ax = plt.subplots(figsize=(10, 4))
+        # Create a two-column layout for visualization and top students
+        col1, col2 = st.columns([2, 1])
         
-        # Pie chart for academic standing
-        academic_standing = pd.cut(
-            students_gpa_df['gpa'],
-            bins=[0, 2.0, 3.0, 3.5, 4.0],
-            labels=['At Risk (< 2.0)', 'Average (2.0-3.0)', 'Good (3.0-3.5)', 'Excellent (3.5-4.0)']
-        ).value_counts()
+        with col1:
+            # Enhanced pie chart for academic standing
+            st.markdown("### 📈 Academic Standing")
+            
+            # Create a figure with a single pie chart
+            fig, ax = plt.subplots(figsize=(8, 4.5))
+            
+            # Better colors for academic standing
+            colors = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
+            
+            # Pie chart for academic standing
+            academic_standing = pd.cut(
+                students_gpa_df['gpa'],
+                bins=[0, 2.0, 3.0, 3.5, 4.0],
+                labels=['At Risk (< 2.0)', 'Average (2.0-3.0)', 'Good (3.0-3.5)', 'Excellent (3.5-4.0)']
+            ).value_counts()
+            
+            # Create better styled pie chart
+            wedges, texts, autotexts = ax.pie(
+                academic_standing, 
+                labels=None,  # We'll create a custom legend
+                autopct='%1.1f%%', 
+                startangle=90,
+                colors=colors,
+                wedgeprops={'width': 0.6, 'edgecolor': 'w', 'linewidth': 1},
+                textprops={'fontsize': 11, 'color': 'white', 'fontweight': 'bold'}
+            )
+            
+            # Draw a white circle at the center to create a donut chart
+            centre_circle = plt.Circle((0, 0), 0.3, fc='white')
+            ax.add_patch(centre_circle)
+            
+            # Add a custom legend
+            legend_labels = academic_standing.index
+            legend_handles = [plt.Rectangle((0, 0), 1, 1, color=colors[i]) for i in range(len(legend_labels))]
+            ax.legend(legend_handles, legend_labels, loc="center", bbox_to_anchor=(0.5, 0), 
+                      frameon=False, ncol=2, fontsize=10)
+            
+            # Add title with better styling
+            ax.set_title('Student Performance Distribution', fontsize=14, fontweight='bold', pad=20)
+            
+            # Make the plot look clean
+            ax.set_aspect('equal')
+            
+            # Display the chart
+            st.pyplot(fig)
+            
+        with col2:
+            # Top 5 students by GPA with better styling
+            st.markdown("### 🏆 Top Performers")
+            
+            top_students = students_gpa_df.sort_values('gpa', ascending=False).head(5)
+            
+            # Format the data for better display
+            display_df = top_students[['name', 'gpa']].reset_index(drop=True)
+            display_df.index = display_df.index + 1  # Start index from 1
+            
+            # Add styling to the table
+            st.dataframe(
+                display_df, 
+                column_config={
+                    "name": "Student Name",
+                    "gpa": st.column_config.NumberColumn(
+                        "GPA",
+                        format="%.2f",
+                        help="Grade Point Average on a 4.0 scale"
+                    )
+                },
+                use_container_width=True,
+                hide_index=False
+            )
+            
+            # Display total number of students with better styling
+            st.markdown(f"""
+            <div style="margin-top: 20px; text-align: center; padding: 10px; 
+                background-color: #f8f9fa; border-radius: 5px;">
+                <span style="font-weight: bold;">Total Students:</span> {total_students}
+            </div>
+            """, unsafe_allow_html=True)
         
-        ax.pie(
-            academic_standing, 
-            labels=academic_standing.index,
-            autopct='%1.1f%%', 
-            startangle=90,
-            colors=sns.color_palette('viridis', len(academic_standing))
-        )
-        ax.set_title('Academic Standing Distribution')
-        
-        # Display the chart with minimized size
-        st.pyplot(fig)
-        
-        # Top 5 students by GPA for quick reference
-        st.markdown("### Top Performing Students")
-        top_students = students_gpa_df.sort_values('gpa', ascending=False).head(5)
-        st.dataframe(top_students[['student_id', 'name', 'gpa']], use_container_width=True)
-        
+        # Course performance snapshot
+        if course_analytics:
+            st.markdown("<hr style='margin: 15px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+            st.markdown("### 📚 Course Performance Snapshot")
+            
+            # Get average grades for each course
+            course_grades = {}
+            for course_name, data in course_analytics.items():
+                course_grades[course_name] = data['average_grade']
+            
+            course_df = pd.DataFrame({
+                'Course': list(course_grades.keys()),
+                'Average Grade': list(course_grades.values())
+            }).sort_values('Average Grade', ascending=False)
+            
+            # Create a horizontal bar chart for course performance
+            fig, ax = plt.subplots(figsize=(10, 3 + 0.4 * len(course_grades)))
+            bars = ax.barh(course_df['Course'], course_df['Average Grade'], color='#4CAF50')
+            
+            # Add data labels to the bars
+            for i, bar in enumerate(bars):
+                grade = course_df['Average Grade'].iloc[i]
+                letter = "A" if grade >= 90 else "B" if grade >= 80 else "C" if grade >= 70 else "D" if grade >= 60 else "F"
+                ax.text(
+                    grade + 1, bar.get_y() + bar.get_height()/2,
+                    f"{grade:.1f} ({letter})", 
+                    va='center', fontsize=10, fontweight='bold'
+                )
+            
+            # Customize the chart
+            ax.set_xlim(0, 105)  # Give a little extra space for labels
+            ax.set_xlabel('Average Grade', fontsize=12)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.tick_params(axis='both', which='major', labelsize=10)
+            
+            # Add grid lines for better readability
+            ax.grid(axis='x', linestyle='--', alpha=0.7)
+            
+            # Display the chart
+            st.pyplot(fig)
+            
     except Exception as e:
         st.info("Analytics will appear here after you set up the database and add data.")
         import traceback
