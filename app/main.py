@@ -11,6 +11,10 @@ from app.ui.course_ui import render_course_management
 from app.ui.grade_ui import render_grade_management
 from app.ui.analytics_ui import render_analytics
 from app.ui.db_ui import render_db_setup
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from app.services.grade_service import GradeService
 
 def main():
     """Main application entry point"""
@@ -85,9 +89,12 @@ def render_dashboard():
     ## Welcome to the Student Grades Tracker!
     
     This application helps you manage and analyze student grades efficiently.
-    
-    ### Key Features:
     """)
+    
+    # Attempt to show analytics on the dashboard
+    dashboard_analytics()
+    
+    st.markdown("### Key Features:")
     
     # Feature cards
     col1, col2, col3 = st.columns(3)
@@ -101,7 +108,7 @@ def render_dashboard():
         """)
         if st.button("Go to Student Management"):
             st.session_state.navigation = "👨‍🎓 Student Management"
-            st.experimental_rerun()
+            st.rerun()
     
     with col2:
         st.markdown("""
@@ -112,7 +119,7 @@ def render_dashboard():
         """)
         if st.button("Go to Course Management"):
             st.session_state.navigation = "📚 Course Management"
-            st.experimental_rerun()
+            st.rerun()
     
     with col3:
         st.markdown("""
@@ -123,21 +130,21 @@ def render_dashboard():
         """)
         if st.button("Go to Grade Management"):
             st.session_state.navigation = "📝 Grades Management"
-            st.experimental_rerun()
+            st.rerun()
     
     # Analytics preview
     st.markdown("---")
-    st.subheader("📊 Analytics & Reporting")
+    st.subheader("📊 Full Analytics & Reporting")
     st.markdown("""
-    Get valuable insights from your data:
-    - Student GPA calculations
-    - Performance distribution
-    - Course analytics
-    - At-risk student identification
+    For more detailed insights from your data, visit the Analytics section:
+    - Detailed student GPA analyses
+    - Complete performance distribution
+    - In-depth course analytics
+    - At-risk student identification and filtering
     """)
-    if st.button("Go to Analytics"):
+    if st.button("Go to Full Analytics"):
         st.session_state.navigation = "📊 Analytics & Reporting"
-        st.experimental_rerun()
+        st.rerun()
     
     # Getting started guide
     st.markdown("---")
@@ -153,7 +160,73 @@ def render_dashboard():
         """)
         if st.button("Go to Database Setup"):
             st.session_state.navigation = "⚙️ Database Setup"
-            st.experimental_rerun()
+            st.rerun()
+
+def dashboard_analytics():
+    """Show a summary of key analytics on the dashboard"""
+    try:
+        # Get analytics data
+        students_gpa_df, course_analytics = GradeService.get_analytics_data()
+        
+        if students_gpa_df.empty:
+            st.info("No student data available for analytics yet. Set up the database and add data to see analytics here.")
+            return
+            
+        st.markdown("## 📊 Academic Overview")
+        
+        # Summary metrics in a clean row
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            avg_gpa = students_gpa_df['gpa'].mean()
+            st.metric("Average GPA", f"{avg_gpa:.2f}")
+        with col2:
+            passing_students = len(students_gpa_df[students_gpa_df['gpa'] >= 2.0])
+            total_students = len(students_gpa_df)
+            pass_rate = passing_students / total_students * 100 if total_students > 0 else 0
+            st.metric("Pass Rate", f"{pass_rate:.1f}%")
+        with col3:
+            honor_students = len(students_gpa_df[students_gpa_df['gpa'] >= 3.5])
+            honor_rate = honor_students / total_students * 100 if total_students > 0 else 0
+            st.metric("Honor Students", f"{honor_rate:.1f}%")
+        with col4:
+            failing_students = len(students_gpa_df[students_gpa_df['gpa'] < 2.0])
+            st.metric("Students at Risk", f"{failing_students}")
+        
+        # Show a single consolidated visualization instead of multiple
+        st.markdown("### Academic Standing")
+        
+        # Create a figure with a single pie chart to save space
+        fig, ax = plt.subplots(figsize=(10, 4))
+        
+        # Pie chart for academic standing
+        academic_standing = pd.cut(
+            students_gpa_df['gpa'],
+            bins=[0, 2.0, 3.0, 3.5, 4.0],
+            labels=['At Risk (< 2.0)', 'Average (2.0-3.0)', 'Good (3.0-3.5)', 'Excellent (3.5-4.0)']
+        ).value_counts()
+        
+        ax.pie(
+            academic_standing, 
+            labels=academic_standing.index,
+            autopct='%1.1f%%', 
+            startangle=90,
+            colors=sns.color_palette('viridis', len(academic_standing))
+        )
+        ax.set_title('Academic Standing Distribution')
+        
+        # Display the chart with minimized size
+        st.pyplot(fig)
+        
+        # Top 5 students by GPA for quick reference
+        st.markdown("### Top Performing Students")
+        top_students = students_gpa_df.sort_values('gpa', ascending=False).head(5)
+        st.dataframe(top_students[['student_id', 'name', 'gpa']], use_container_width=True)
+        
+    except Exception as e:
+        st.info("Analytics will appear here after you set up the database and add data.")
+        import traceback
+        print(f"Dashboard analytics error: {e}")
+        print(traceback.format_exc())
 
 if __name__ == "__main__":
     main() 
